@@ -1,0 +1,532 @@
+import { useState, useEffect, useRef } from "react";
+
+/* ═══════════════════════════════════════════════════════════════
+   AgentGuard — The Trust Layer for AI Agent Skills
+   Full Web App: Landing + Directory + Skill Detail + Search
+   Theme: Terminal / Hacker Console / Green Phosphor CRT
+   ═══════════════════════════════════════════════════════════════ */
+
+const FONTS = `@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Fira+Code:wght@300;400;500;600;700&display=swap');`;
+const MONO = "'JetBrains Mono','Fira Code','Cascadia Code','SF Mono',monospace";
+
+const C = {
+  bg: "#0a0a0a", surface: "#111", card: "#161616", cardHover: "#1a1a1a",
+  border: "#222", borderLight: "#2a2a2a", borderHover: "#333",
+  green: "#4ade80", greenBright: "#86efac", greenDim: "#22c55e", greenDark: "#166534", greenGlow: "rgba(74,222,128,0.07)",
+  red: "#f87171", redBright: "#fca5a5", redDim: "#dc2626",
+  amber: "#fbbf24", amberDim: "#d97706",
+  cyan: "#67e8f9", cyanDim: "#22d3ee",
+  white: "#e5e5e5", gray: "#888", darkGray: "#555", dimGray: "#333", mutedGray: "#2a2a2a",
+};
+
+// ─── SKILL DATABASE ───
+const SKILLS = [
+  { id: "claw-gmail-ops", name: "claw-gmail-ops", platform: "openclaw", author: "moltyverse", version: "2.1.0", trust: "verified", score: 9.4, safety: 9.8, quality: 9.2, rating: 4.7, dl: 14200, dlWeek: 1840, reviews: 186, license: "MIT", desc: "Full Gmail orchestration — priority inbox management, smart labeling with ML categorization, context-aware auto-drafts, batch operations, and thread summarization.", perms: [{n:"gmail.read",r:"low",d:"Read email messages and metadata"},{n:"gmail.label",r:"low",d:"Create and apply labels"},{n:"gmail.draft",r:"medium",d:"Create draft replies"}], scans: [{e:"virustotal",s:"clean",det:"0/72"},{e:"static-analysis",s:"clean",f:0},{e:"dep-audit",s:"clean",v:0}], threats: [], tags: ["email","gmail","productivity","automation"], src: "https://github.com/moltyverse/claw-gmail-ops", install: "clawhub install claw-gmail-ops", updated: "2026-03-10", created: "2025-12-15", category: "communication" },
+  { id: "langchain-pr-agent", name: "langchain-pr-agent", platform: "langchain", author: "devtools-ai", version: "3.0.2", trust: "verified", score: 9.1, safety: 9.5, quality: 9.0, rating: 4.5, dl: 9800, dlWeek: 1200, reviews: 112, license: "Apache-2.0", desc: "Autonomous PR code reviewer with multi-language security vulnerability scanning, style enforcement, performance regression detection, and inline suggestion generation with confidence scores.", perms: [{n:"github.pr.read",r:"low",d:"Read pull request content"},{n:"github.pr.comment",r:"medium",d:"Post review comments"},{n:"github.checks",r:"medium",d:"Create check runs"},{n:"github.contents",r:"low",d:"Read repository files"}], scans: [{e:"virustotal",s:"clean",det:"0/72"},{e:"static-analysis",s:"clean",f:0},{e:"dep-audit",s:"clean",v:0}], threats: [], tags: ["github","code-review","ci-cd","development","security"], src: "https://github.com/devtools-ai/langchain-pr-agent", install: "pip install langchain-pr-agent", updated: "2026-03-08", created: "2025-11-20", category: "development" },
+  { id: "crew-slack-digest", name: "crew-slack-digest", platform: "crewai", author: "agentsmith", version: "1.4.0", trust: "scanned", score: 8.7, safety: 9.0, quality: 8.5, rating: 4.3, dl: 7100, dlWeek: 890, reviews: 78, license: "MIT", desc: "Multi-channel Slack summarizer with intelligent action item extraction, sentiment analysis, priority detection, and automated daily briefing generation for distributed teams.", perms: [{n:"slack.read",r:"low",d:"Read channel messages"},{n:"slack.post",r:"medium",d:"Post messages to channels"}], scans: [{e:"virustotal",s:"clean",det:"0/72"},{e:"static-analysis",s:"clean",f:0},{e:"dep-audit",s:"clean",v:0}], threats: [], tags: ["slack","summary","team","productivity"], src: "https://github.com/agentsmith/crew-slack-digest", install: "pip install crewai-slack-digest", updated: "2026-03-05", created: "2026-01-10", category: "productivity" },
+  { id: "claw-shopify-sync", name: "claw-shopify-sync", platform: "openclaw", author: "ecom-ai", version: "1.8.3", trust: "verified", score: 8.9, safety: 9.2, quality: 8.8, rating: 4.6, dl: 4500, dlWeek: 620, reviews: 56, license: "MIT", desc: "Real-time Shopify inventory tracking with intelligent auto-reorder triggers, competitor pricing intelligence, sales velocity analytics, and low-stock prediction alerts.", perms: [{n:"shopify.read",r:"low",d:"Read store data"},{n:"shopify.inventory",r:"medium",d:"Modify inventory levels"},{n:"shopify.orders",r:"medium",d:"Read order data"},{n:"shopify.products",r:"medium",d:"Read/write products"}], scans: [{e:"virustotal",s:"clean",det:"0/72"},{e:"static-analysis",s:"clean",f:0},{e:"dep-audit",s:"clean",v:1}], threats: [], tags: ["shopify","ecommerce","inventory","analytics"], src: "https://github.com/ecom-ai/claw-shopify-sync", install: "clawhub install claw-shopify-sync", updated: "2026-03-11", created: "2025-10-22", category: "ecommerce" },
+  { id: "autogen-notion-bridge", name: "autogen-notion-bridge", platform: "autogen", author: "notioneer", version: "1.2.0", trust: "scanned", score: 8.2, safety: 8.5, quality: 8.0, rating: 4.1, dl: 6300, dlWeek: 780, reviews: 41, license: "MIT", desc: "Bi-directional Notion database sync with semantic search, auto-tagging, cross-database linking, and persistent agent memory across conversation sessions.", perms: [{n:"notion.read",r:"low",d:"Read Notion pages"},{n:"notion.write",r:"medium",d:"Create and update pages"},{n:"notion.search",r:"low",d:"Search workspace"}], scans: [{e:"virustotal",s:"clean",det:"0/72"},{e:"static-analysis",s:"clean",f:0},{e:"dep-audit",s:"clean",v:0}], threats: [], tags: ["notion","sync","knowledge","memory"], src: "https://github.com/notioneer/autogen-notion-bridge", install: "pip install autogen-notion-bridge", updated: "2026-03-07", created: "2026-01-05", category: "productivity" },
+  { id: "claw-crypto-wallet", name: "claw-crypto-wallet", platform: "openclaw", author: "x-anon-dev", version: "0.9.1", trust: "flagged", score: 1.2, safety: 0.3, quality: 2.1, rating: 1.1, dl: 340, dlWeek: 12, reviews: 203, license: "UNLICENSED", desc: "Cryptocurrency portfolio tracker with DeFi integration and automated trading signals. WARNING: Contains credential exfiltration malware.", perms: [{n:"fs.read",r:"high",d:"Read filesystem"},{n:"fs.write",r:"high",d:"Write to filesystem"},{n:"net.http",r:"high",d:"Make HTTP requests"},{n:"shell.exec",r:"critical",d:"Execute shell commands"},{n:"env.read",r:"critical",d:"Read environment variables"},{n:"keychain.read",r:"critical",d:"Read system keychain"}], scans: [{e:"virustotal",s:"malicious",det:"14/72"},{e:"static-analysis",s:"malicious",f:4},{e:"dep-audit",s:"malicious",v:7}], threats: ["Base64-encoded shell command in SKILL.md line 47","Downloads binary from external host: glot.io/x5ki60w1","Reads ~/.clawdbot/.env and exfiltrates via webhook","Keychain access with no declared purpose"], tags: ["crypto","wallet","finance"], src: "https://github.com/x-anon-dev/claw-crypto-wallet", install: "DO NOT INSTALL", updated: "2026-02-28", created: "2026-02-25", category: "finance" },
+  { id: "claw-calendar-ai", name: "claw-calendar-ai", platform: "openclaw", author: "timecraft", version: "1.5.0", trust: "verified", score: 9.0, safety: 9.4, quality: 8.8, rating: 4.6, dl: 5200, dlWeek: 710, reviews: 67, license: "MIT", desc: "Intelligent calendar management — auto-scheduling, conflict resolution, meeting prep briefs, timezone handling, and smart availability detection.", perms: [{n:"calendar.read",r:"low",d:"Read calendar events"},{n:"calendar.write",r:"medium",d:"Create/modify events"},{n:"contacts.read",r:"low",d:"Read contacts for scheduling"}], scans: [{e:"virustotal",s:"clean",det:"0/72"},{e:"static-analysis",s:"clean",f:0},{e:"dep-audit",s:"clean",v:0}], threats: [], tags: ["calendar","scheduling","productivity"], src: "https://github.com/timecraft/claw-calendar-ai", install: "clawhub install claw-calendar-ai", updated: "2026-03-09", created: "2025-11-01", category: "productivity" },
+  { id: "claw-sus-downloader", name: "claw-sus-downloader", platform: "openclaw", author: "anon-builder", version: "0.2.0", trust: "flagged", score: 0.8, safety: 0.1, quality: 1.5, rating: 1.0, dl: 89, dlWeek: 3, reviews: 47, license: "NONE", desc: "File downloader utility. THREAT: Trojan dropper disguised as download manager. Installs persistent backdoor.", perms: [{n:"fs.write",r:"critical",d:"Write anywhere on filesystem"},{n:"shell.exec",r:"critical",d:"Execute arbitrary commands"},{n:"net.http",r:"high",d:"Unrestricted network access"},{n:"startup.register",r:"critical",d:"Register startup process"}], scans: [{e:"virustotal",s:"malicious",det:"23/72"},{e:"static-analysis",s:"malicious",f:6},{e:"dep-audit",s:"malicious",v:9}], threats: ["Trojan dropper: downloads and executes remote payload on install","Registers persistent LaunchAgent/systemd service","Exfiltrates SSH keys and browser cookies","Communicates with C2 server at 185.xx.xx.xx"], tags: ["malware","trojan","backdoor"], src: "https://github.com/anon-builder/claw-sus-downloader", install: "DO NOT INSTALL", updated: "2026-03-01", created: "2026-02-27", category: "malware" },
+];
+
+const PLATFORMS = [
+  { slug: "openclaw", name: "OpenClaw", count: 13729, verified: 847, threats: 186 },
+  { slug: "langchain", name: "LangChain", count: 4216, verified: 412, threats: 67 },
+  { slug: "crewai", name: "CrewAI", count: 1892, verified: 203, threats: 34 },
+  { slug: "autogen", name: "AutoGen", count: 967, verified: 98, threats: 21 },
+  { slug: "openai-sdk", name: "OpenAI SDK", count: 2341, verified: 186, threats: 52 },
+  { slug: "composio", name: "Composio", count: 834, verified: 67, threats: 18 },
+];
+
+const CATEGORIES = [
+  { slug: "all", name: "All", icon: "◎" },
+  { slug: "productivity", name: "Productivity", icon: "⚡" },
+  { slug: "communication", name: "Communication", icon: "◆" },
+  { slug: "development", name: "Development", icon: "⟨/⟩" },
+  { slug: "ecommerce", name: "E-Commerce", icon: "◈" },
+  { slug: "finance", name: "Finance", icon: "◇" },
+];
+
+// ─── Helpers ───
+const pad = (s, n) => { while (s.length < n) s += " "; return s; };
+const padL = (s, n) => { s = String(s); while (s.length < n) s = " " + s; return s; };
+const fmtNum = (n) => n >= 1000 ? (n / 1000).toFixed(1) + "K" : String(n);
+const trustColor = (t) => t === "verified" ? C.green : t === "scanned" ? C.cyan : t === "caution" ? C.amber : t === "flagged" ? C.red : C.darkGray;
+const trustLabel = (t) => t === "verified" ? "VERIFIED" : t === "scanned" ? "SCANNED" : t === "caution" ? "CAUTION" : t === "flagged" ? "THREAT" : "PENDING";
+const trustIcon = (t) => t === "verified" ? "✓" : t === "scanned" ? "◐" : t === "caution" ? "!" : t === "flagged" ? "✗" : "○";
+const riskColor = (r) => r === "low" ? C.green : r === "medium" ? C.amber : r === "high" ? C.red : r === "critical" ? C.redBright : C.darkGray;
+
+// ─── Components ───
+
+function Badge({ trust, size = "sm" }) {
+  const col = trustColor(trust);
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: size === "lg" ? "4px 12px" : "2px 8px", fontSize: size === "lg" ? 12 : 10, fontFamily: MONO, fontWeight: 600, color: col, background: col + "12", border: `1px solid ${col}30`, borderRadius: 3 }}>
+      {trustIcon(trust)} {trustLabel(trust)}
+    </span>
+  );
+}
+
+function ScoreBar({ score, width = 10 }) {
+  const pct = score / 10;
+  const col = score >= 8 ? C.green : score >= 5 ? C.amber : C.red;
+  const filled = Math.round(pct * width);
+  return (
+    <span style={{ fontFamily: MONO, fontSize: 12 }}>
+      <span style={{ color: col }}>{"[" + "█".repeat(filled) + "░".repeat(width - filled) + "]"}</span>
+      <span style={{ color: col, marginLeft: 4 }}>{score.toFixed(1)}</span>
+    </span>
+  );
+}
+
+function PermTag({ perm }) {
+  const col = riskColor(perm.r);
+  const danger = perm.r === "high" || perm.r === "critical";
+  return (
+    <span style={{ display: "inline-block", padding: "2px 6px", margin: "2px", fontSize: 10, fontFamily: MONO, color: col, background: danger ? col + "10" : "transparent", border: `1px solid ${danger ? col + "30" : C.border}`, borderRadius: 2 }}>{perm.n}</span>
+  );
+}
+
+function Scanline() {
+  return <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 9999, background: "repeating-linear-gradient(0deg,transparent,transparent 1px,rgba(0,0,0,0.03) 1px,rgba(0,0,0,0.03) 2px)", opacity: 0.4 }} />;
+}
+
+// ─── NAVBAR ───
+function Nav({ page, setPage, searchQuery, setSearchQuery, onSearch }) {
+  return (
+    <nav style={{ position: "sticky", top: 0, zIndex: 100, background: C.bg + "F0", backdropFilter: "blur(10px)", borderBottom: `1px solid ${C.border}`, padding: "10px 24px", display: "flex", alignItems: "center", gap: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", flexShrink: 0 }} onClick={() => setPage({ view: "home" })}>
+        <span style={{ color: C.green, fontSize: 16 }}>⛨</span>
+        <span style={{ fontFamily: MONO, color: C.green, fontWeight: 700, fontSize: 14, letterSpacing: 0.5 }}>AgentGuard</span>
+        <span style={{ fontFamily: MONO, color: C.dimGray, fontSize: 10 }}>v0.1</span>
+      </div>
+
+      {/* Search */}
+      <div style={{ flex: 1, maxWidth: 500, display: "flex", background: C.surface, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+        <span style={{ padding: "8px 12px", color: C.greenDim, fontFamily: MONO, fontSize: 12, borderRight: `1px solid ${C.border}`, display: "flex", alignItems: "center" }}>$ search</span>
+        <input
+          type="text" value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && onSearch()}
+          placeholder="skill name, tag, or keyword..."
+          style={{ flex: 1, padding: "8px 12px", border: "none", outline: "none", background: "transparent", color: C.white, fontFamily: MONO, fontSize: 12 }}
+        />
+        <button onClick={onSearch} style={{ padding: "8px 16px", border: "none", background: C.green, color: C.bg, fontFamily: MONO, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>↵</button>
+      </div>
+
+      {/* Nav links */}
+      <div style={{ display: "flex", gap: 16, flexShrink: 0 }}>
+        {[{ key: "directory", label: "/directory" }, { key: "platforms", label: "/platforms" }].map(n => (
+          <span key={n.key} onClick={() => setPage({ view: n.key })} style={{ fontFamily: MONO, fontSize: 11, color: page.view === n.key ? C.green : C.darkGray, cursor: "pointer", transition: "color 0.2s" }}
+            onMouseEnter={e => e.target.style.color = C.green}
+            onMouseLeave={e => { if (page.view !== n.key) e.target.style.color = C.darkGray; }}>
+            {n.label}
+          </span>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+// ─── HERO / LANDING ───
+function HeroSection({ setPage, setSearchQuery }) {
+  const [typedText, setTypedText] = useState("");
+  const fullText = "agentguard scan --all";
+
+  useEffect(() => {
+    let i = 0;
+    const timer = setInterval(() => {
+      if (i <= fullText.length) { setTypedText(fullText.slice(0, i)); i++; }
+      else clearInterval(timer);
+    }, 50);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <section style={{ padding: "80px 24px 40px", maxWidth: 700, margin: "0 auto" }}>
+      {/* ASCII Logo */}
+      <pre style={{ fontFamily: MONO, fontSize: 9, lineHeight: 1.2, color: C.green, textAlign: "center", marginBottom: 24, textShadow: `0 0 10px ${C.greenGlow}`, letterSpacing: 0.5 }}>{`
+    _                    _    ____                     _ 
+   / \\   __ _  ___ _ __ | |_ / ___|_   _  __ _ _ __ __| |
+  / _ \\ / _\` |/ _ \\ '_ \\| __| |  _| | | |/ _\` | '__/ _\` |
+ / ___ \\ (_| |  __/ | | | |_| |_| | |_| | (_| | | | (_| |
+/_/   \\_\\__, |\\___|_| |_|\\__|\\____|\\__,_|\\__,_|_|  \\__,_|
+        |___/                                             
+      `.trim()}</pre>
+
+      {/* Terminal window */}
+      <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, overflow: "hidden", marginBottom: 32 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: C.card, borderBottom: `1px solid ${C.border}` }}>
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ff5f56" }} />
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ffbd2e" }} />
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#27c93f" }} />
+          <span style={{ fontFamily: MONO, fontSize: 10, color: C.darkGray, marginLeft: 8 }}>agentguard — main</span>
+        </div>
+        <div style={{ padding: "14px 16px", fontFamily: MONO, fontSize: 12, lineHeight: 1.8, color: C.white }}>
+          <div><span style={{ color: C.greenDim }}>$</span> agentguard status</div>
+          <div><span style={{ color: C.green }}>● ONLINE</span> <span style={{ color: C.darkGray }}>— monitoring 24,079 skills across 7 platforms</span></div>
+          <div><span style={{ color: C.darkGray }}>  threats blocked:</span> <span style={{ color: C.red }}>412</span> <span style={{ color: C.darkGray }}>| verified:</span> <span style={{ color: C.green }}>1,813</span> <span style={{ color: C.darkGray }}>| scan cycle:</span> <span style={{ color: C.white }}>6h</span></div>
+          <div style={{ marginTop: 8 }}>
+            <span style={{ color: C.greenDim }}>$</span> <span style={{ color: C.white }}>{typedText}</span>
+            <span style={{ animation: "blink 1s step-end infinite", color: C.green }}>▌</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Tagline */}
+      <div style={{ textAlign: "center", marginBottom: 32 }}>
+        <h1 style={{ fontFamily: MONO, fontSize: 24, fontWeight: 700, color: C.white, marginBottom: 8, letterSpacing: 0.5 }}>
+          Trust no agent skill blindly.
+        </h1>
+        <p style={{ fontFamily: MONO, fontSize: 13, color: C.gray, lineHeight: 1.7, maxWidth: 480, margin: "0 auto" }}>
+          Every skill scanned, reviewed, and trust-scored across OpenClaw, LangChain, CrewAI, AutoGen, and the entire agent ecosystem.
+        </p>
+      </div>
+
+      {/* Quick actions */}
+      <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+        <button onClick={() => setPage({ view: "directory" })} style={{ ...btnStyle, background: C.green, color: C.bg, border: "none" }}>Browse Directory</button>
+        <button onClick={() => { setSearchQuery(""); setPage({ view: "directory" }); }} style={{ ...btnStyle, background: "transparent", color: C.green, border: `1px solid ${C.greenDark}` }}>Search Skills</button>
+      </div>
+
+      {/* Stats bar */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 32, marginTop: 40, paddingTop: 24, borderTop: `1px solid ${C.border}` }}>
+        {[{ n: "24,079", l: "indexed", c: C.white }, { n: "1,813", l: "verified", c: C.green }, { n: "412", l: "threats", c: C.red }, { n: "6h", l: "cycle", c: C.amber }].map((s, i) => (
+          <div key={i} style={{ textAlign: "center" }}>
+            <div style={{ fontFamily: MONO, fontSize: 20, fontWeight: 700, color: s.c }}>{s.n}</div>
+            <div style={{ fontFamily: MONO, fontSize: 10, color: C.darkGray }}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ─── SKILL CARD (Directory) ───
+function SkillCard({ skill, onClick }) {
+  const [hov, setHov] = useState(false);
+  const isThreat = skill.trust === "flagged";
+  return (
+    <div onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ background: isThreat ? "rgba(248,113,113,0.03)" : (hov ? C.cardHover : C.card), border: `1px solid ${hov ? (isThreat ? C.red + "40" : C.borderHover) : C.border}`, padding: "14px 16px", cursor: "pointer", transition: "all 0.2s", borderLeft: `2px solid ${trustColor(skill.trust)}${hov ? "" : "60"}`, display: "flex", flexDirection: "column", gap: 8 }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: C.white }}>{skill.name}</span>
+          <div style={{ fontFamily: MONO, fontSize: 10, color: C.darkGray, marginTop: 2 }}>
+            <span style={{ color: C.cyanDim }}>{skill.platform}</span> · @{skill.author} · v{skill.version}
+          </div>
+        </div>
+        <Badge trust={skill.trust} />
+      </div>
+      {/* Desc */}
+      <div style={{ fontFamily: MONO, fontSize: 11, color: isThreat ? C.red + "cc" : C.gray, lineHeight: 1.6, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{skill.desc}</div>
+      {/* Footer */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
+        <ScoreBar score={skill.score} />
+        <div style={{ fontFamily: MONO, fontSize: 10, color: C.darkGray, display: "flex", gap: 12 }}>
+          <span>{fmtNum(skill.dlWeek)}/wk</span>
+          <span>{skill.reviews} rev</span>
+          <span style={{ color: skill.perms.length > 4 ? C.red : C.darkGray }}>{skill.perms.length} perms</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── DIRECTORY PAGE ───
+function DirectoryPage({ setPage, skills, searchQuery }) {
+  const [filter, setFilter] = useState("all");
+  const [platform, setPlatform] = useState("all");
+  const [sort, setSort] = useState("score");
+
+  let filtered = skills;
+  if (filter === "safe") filtered = filtered.filter(s => s.trust === "verified" || s.trust === "scanned");
+  if (filter === "threats") filtered = filtered.filter(s => s.trust === "flagged");
+  if (platform !== "all") filtered = filtered.filter(s => s.platform === platform);
+
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    filtered = filtered.filter(s => s.name.includes(q) || s.desc.toLowerCase().includes(q) || s.tags.some(t => t.includes(q)) || s.platform.includes(q) || s.author.includes(q));
+  }
+
+  if (sort === "score") filtered.sort((a, b) => b.score - a.score);
+  if (sort === "downloads") filtered.sort((a, b) => b.dlWeek - a.dlWeek);
+  if (sort === "newest") filtered.sort((a, b) => b.updated.localeCompare(a.updated));
+  if (sort === "reviews") filtered.sort((a, b) => b.reviews - a.reviews);
+
+  return (
+    <section style={{ padding: "24px", maxWidth: 900, margin: "0 auto" }}>
+      {/* Header */}
+      <div style={{ fontFamily: MONO, fontSize: 12, color: C.darkGray, marginBottom: 16 }}>
+        <span style={{ color: C.green }}>$</span> agentguard list {searchQuery ? `--query "${searchQuery}" ` : ""}{filter !== "all" ? `--${filter} ` : ""}{platform !== "all" ? `--platform ${platform} ` : ""}--sort {sort}
+      </div>
+
+      {/* Filters bar */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        {/* Trust filter */}
+        {[{ k: "all", l: "all" }, { k: "safe", l: "--safe" }, { k: "threats", l: "--threats" }].map(f => (
+          <button key={f.k} onClick={() => setFilter(f.k)} style={{ ...filterBtnStyle, background: filter === f.k ? (f.k === "threats" ? C.red + "15" : f.k === "safe" ? C.green + "15" : C.dimGray) : "transparent", color: filter === f.k ? (f.k === "threats" ? C.red : f.k === "safe" ? C.green : C.white) : C.darkGray, borderColor: filter === f.k ? (f.k === "threats" ? C.red + "40" : f.k === "safe" ? C.green + "40" : C.border) : C.border }}>{f.l}</button>
+        ))}
+        <span style={{ fontFamily: MONO, fontSize: 10, color: C.dimGray }}>│</span>
+        {/* Platform filter */}
+        <select value={platform} onChange={e => setPlatform(e.target.value)} style={{ fontFamily: MONO, fontSize: 11, background: C.surface, color: C.gray, border: `1px solid ${C.border}`, padding: "4px 8px", cursor: "pointer", outline: "none" }}>
+          <option value="all">all platforms</option>
+          {PLATFORMS.map(p => <option key={p.slug} value={p.slug}>{p.name}</option>)}
+        </select>
+        <span style={{ fontFamily: MONO, fontSize: 10, color: C.dimGray }}>│</span>
+        {/* Sort */}
+        <select value={sort} onChange={e => setSort(e.target.value)} style={{ fontFamily: MONO, fontSize: 11, background: C.surface, color: C.gray, border: `1px solid ${C.border}`, padding: "4px 8px", cursor: "pointer", outline: "none" }}>
+          <option value="score">sort: score</option>
+          <option value="downloads">sort: downloads</option>
+          <option value="newest">sort: newest</option>
+          <option value="reviews">sort: reviews</option>
+        </select>
+        <span style={{ fontFamily: MONO, fontSize: 10, color: C.darkGray, marginLeft: "auto" }}>{filtered.length} results</span>
+      </div>
+
+      {/* Results */}
+      {filtered.length === 0 ? (
+        <div style={{ fontFamily: MONO, fontSize: 12, color: C.darkGray, padding: 40, textAlign: "center", border: `1px solid ${C.border}` }}>
+          No skills found. Try a different search or filter.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {filtered.map(s => <SkillCard key={s.id} skill={s} onClick={() => setPage({ view: "detail", id: s.id })} />)}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ─── SKILL DETAIL PAGE (Scan Report) ───
+function SkillDetailPage({ skill, setPage }) {
+  if (!skill) return <div style={{ padding: 40, textAlign: "center", fontFamily: MONO, color: C.darkGray }}>Skill not found.</div>;
+
+  const isThreat = skill.trust === "flagged";
+  const dangerPerms = ["shell.exec", "keychain.read", "env.read", "fs.write", "startup.register"];
+
+  return (
+    <section style={{ padding: "24px", maxWidth: 800, margin: "0 auto" }}>
+      {/* Breadcrumb */}
+      <div style={{ fontFamily: MONO, fontSize: 11, color: C.darkGray, marginBottom: 16 }}>
+        <span style={{ cursor: "pointer", color: C.greenDim }} onClick={() => setPage({ view: "directory" })}>directory</span>
+        <span> / </span>
+        <span style={{ color: C.white }}>{skill.name}</span>
+      </div>
+
+      {/* Terminal frame */}
+      <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, overflow: "hidden" }}>
+        {/* Title bar */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: C.card, borderBottom: `1px solid ${C.border}` }}>
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ff5f56" }} />
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ffbd2e" }} />
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#27c93f" }} />
+          <span style={{ fontFamily: MONO, fontSize: 10, color: C.darkGray, marginLeft: 8 }}>agentguard scan {skill.name}</span>
+        </div>
+
+        <div style={{ padding: "16px 18px", fontFamily: MONO, fontSize: 12, lineHeight: 1.8 }}>
+          {/* Header info */}
+          <div style={{ color: C.darkGray, marginBottom: 12 }}>─── AgentGuard Scan Report ──────────────────────</div>
+          <div><span style={{ color: C.darkGray }}>skill:     </span><span style={{ color: C.white, fontWeight: 700 }}>{skill.name}</span></div>
+          <div><span style={{ color: C.darkGray }}>version:   </span><span style={{ color: C.white }}>{skill.version}</span></div>
+          <div><span style={{ color: C.darkGray }}>platform:  </span><span style={{ color: C.cyan }}>{skill.platform}</span></div>
+          <div><span style={{ color: C.darkGray }}>author:    </span><span style={{ color: C.cyan }}>@{skill.author}</span></div>
+          <div><span style={{ color: C.darkGray }}>license:   </span><span style={{ color: C.white }}>{skill.license}</span></div>
+          <div><span style={{ color: C.darkGray }}>updated:   </span><span style={{ color: C.white }}>{skill.updated}</span></div>
+          <div><span style={{ color: C.darkGray }}>source:    </span><span style={{ color: C.cyanDim }}>{skill.src}</span></div>
+          <div><span style={{ color: C.darkGray }}>install:   </span><span style={{ color: skill.install === "DO NOT INSTALL" ? C.red : C.green }}>{skill.install}</span></div>
+          <div><span style={{ color: C.darkGray }}>tags:      </span>{skill.tags.map(t => <span key={t} style={{ color: C.darkGray }}>#{t} </span>)}</div>
+
+          {/* Description */}
+          <div style={{ color: C.darkGray, margin: "16px 0 8px" }}>─── Description ─────────────────────────────────</div>
+          <div style={{ color: isThreat ? C.red : C.gray, lineHeight: 1.7 }}>{skill.desc}</div>
+
+          {/* Security Scans */}
+          <div style={{ color: C.darkGray, margin: "16px 0 8px" }}>─── Security Scans ──────────────────────────────</div>
+          {skill.scans.map((scan, i) => {
+            const ok = scan.s === "clean";
+            const icon = ok ? <span style={{ color: C.green }}>✓</span> : <span style={{ color: C.red }}>✗</span>;
+            let detail = "";
+            if (scan.det) detail = ok ? `clean (${scan.det} engines)` : `MALICIOUS (${scan.det} engines)`;
+            else if (scan.f !== undefined) detail = ok ? "no threats found" : `${scan.f} threats detected`;
+            else if (scan.v !== undefined) detail = scan.v === 0 ? "no vulnerabilities" : `${scan.v} critical vulns`;
+            return <div key={i}>{icon} <span style={{ color: C.white }}>{pad(scan.e, 18)}</span> <span style={{ color: ok ? C.green : C.red }}>{detail}</span></div>;
+          })}
+
+          {/* Threats */}
+          {skill.threats.length > 0 && (
+            <>
+              <div style={{ color: C.darkGray, margin: "16px 0 8px" }}>─── Threat Details ──────────────────────────────</div>
+              {skill.threats.map((t, i) => <div key={i} style={{ color: C.red }}>✗ {t}</div>)}
+            </>
+          )}
+
+          {/* Permissions */}
+          <div style={{ color: C.darkGray, margin: "16px 0 8px" }}>─── Permissions ({skill.perms.length}) ─────────────────────────────</div>
+          {skill.perms.map((p, i) => {
+            const col = riskColor(p.r);
+            const icon = (p.r === "low") ? "✓" : "✗";
+            return <div key={i}><span style={{ color: col }}>{icon}</span> <span style={{ color: C.white }}>{pad(p.n, 22)}</span> <span style={{ color: col }}>{pad(p.r.toUpperCase(), 9)}</span> <span style={{ color: C.darkGray }}>{p.d}</span></div>;
+          })}
+
+          {/* Trust Score */}
+          <div style={{ color: C.darkGray, margin: "16px 0 8px" }}>─── Trust Score ─────────────────────────────────</div>
+          <div><span style={{ color: C.darkGray }}>overall:    </span><ScoreBar score={skill.score} width={20} /></div>
+          <div><span style={{ color: C.darkGray }}>safety:     </span><ScoreBar score={skill.safety} width={20} /></div>
+          <div><span style={{ color: C.darkGray }}>quality:    </span><ScoreBar score={skill.quality} width={20} /></div>
+          <div><span style={{ color: C.darkGray }}>community:  </span><ScoreBar score={skill.rating * 2} width={20} /></div>
+          <div style={{ marginTop: 8 }}><span style={{ color: C.darkGray }}>status:     </span><Badge trust={skill.trust} size="lg" /></div>
+
+          {/* Stats */}
+          <div style={{ color: C.darkGray, margin: "16px 0 8px" }}>─── Stats ───────────────────────────────────────</div>
+          <div><span style={{ color: C.darkGray }}>downloads:  </span><span style={{ color: C.white }}>{skill.dl.toLocaleString()} total</span>, <span style={{ color: C.green }}>{skill.dlWeek.toLocaleString()} this week</span></div>
+          <div><span style={{ color: C.darkGray }}>reviews:    </span><span style={{ color: C.white }}>{skill.reviews}</span> <span style={{ color: C.amber }}>({skill.rating}/5.0)</span></div>
+
+          {/* Verdict */}
+          <div style={{ color: C.darkGray, margin: "16px 0 8px" }}>─── Verdict ─────────────────────────────────────</div>
+          {isThreat ? (
+            <>
+              <div style={{ color: C.red, fontWeight: 700 }}>✗ DO NOT INSTALL. This skill is flagged as malicious.</div>
+              <div style={{ color: C.red }}>✗ {skill.threats.length} active threats detected.</div>
+            </>
+          ) : skill.trust === "verified" ? (
+            <div style={{ color: C.green, fontWeight: 700 }}>✓ Safe to install. Verified by AgentGuard.</div>
+          ) : skill.trust === "scanned" ? (
+            <div style={{ color: C.cyan }}>● Automated scan passed. Not yet manually reviewed.</div>
+          ) : (
+            <div style={{ color: C.amber }}>! Use with caution. Review permissions before installing.</div>
+          )}
+
+          <div style={{ color: C.darkGray, marginTop: 4 }}>
+            <span style={{ color: C.greenDim }}>$</span> <span style={{ animation: "blink 1s step-end infinite", color: C.green }}>▌</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Back button */}
+      <div style={{ marginTop: 16, textAlign: "center" }}>
+        <button onClick={() => setPage({ view: "directory" })} style={{ ...btnStyle, background: "transparent", color: C.green, border: `1px solid ${C.greenDark}` }}>← Back to Directory</button>
+      </div>
+    </section>
+  );
+}
+
+// ─── PLATFORMS PAGE ───
+function PlatformsPage() {
+  return (
+    <section style={{ padding: "24px", maxWidth: 700, margin: "0 auto" }}>
+      <div style={{ fontFamily: MONO, fontSize: 12, color: C.darkGray, marginBottom: 16 }}>
+        <span style={{ color: C.green }}>$</span> agentguard platforms --stats
+      </div>
+      <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: C.card, borderBottom: `1px solid ${C.border}` }}>
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ff5f56" }} />
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ffbd2e" }} />
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#27c93f" }} />
+          <span style={{ fontFamily: MONO, fontSize: 10, color: C.darkGray, marginLeft: 8 }}>agentguard platforms</span>
+        </div>
+        <div style={{ padding: "14px 16px", fontFamily: MONO, fontSize: 12, lineHeight: 1.8 }}>
+          <div style={{ color: C.darkGray }}>
+            {pad("Platform", 18)}{padL("Skills", 8)}{padL("Verified", 10)}{padL("Threats", 10)}{"  Coverage"}
+          </div>
+          <div style={{ color: C.dimGray }}>{"─".repeat(58)}</div>
+          {PLATFORMS.map((p, i) => {
+            const pct = ((p.verified / p.count) * 100).toFixed(1);
+            const barLen = Math.min(Math.round(p.verified / 100), 10);
+            return (
+              <div key={i}>
+                <span style={{ color: C.cyan }}>{pad(p.name, 18)}</span>
+                <span style={{ color: C.white }}>{padL(String(p.count), 8)}</span>
+                <span style={{ color: C.green }}>{padL(String(p.verified), 10)}</span>
+                <span style={{ color: C.red }}>{padL(String(p.threats), 10)}</span>
+                {"  "}
+                <span style={{ color: C.greenDim }}>{"█".repeat(barLen)}</span>
+                <span style={{ color: C.dimGray }}>{"░".repeat(10 - barLen)}</span>
+                {" "}
+                <span style={{ color: C.darkGray }}>{pct}%</span>
+              </div>
+            );
+          })}
+          <div style={{ color: C.dimGray }}>{"─".repeat(58)}</div>
+          <div>
+            <span style={{ color: C.white, fontWeight: 700 }}>{pad("TOTAL", 18)}</span>
+            <span style={{ color: C.white, fontWeight: 700 }}>{padL(String(PLATFORMS.reduce((a, p) => a + p.count, 0)), 8)}</span>
+            <span style={{ color: C.green, fontWeight: 700 }}>{padL(String(PLATFORMS.reduce((a, p) => a + p.verified, 0)), 10)}</span>
+            <span style={{ color: C.red, fontWeight: 700 }}>{padL(String(PLATFORMS.reduce((a, p) => a + p.threats, 0)), 10)}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── FOOTER ───
+function Footer({ setPage }) {
+  return (
+    <footer style={{ padding: "20px 24px", marginTop: 40, borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ fontFamily: MONO, fontSize: 11, color: C.darkGray, display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ color: C.green }}>⛨</span> AgentGuard v0.1
+        <span style={{ color: C.green, animation: "blink 2s step-end infinite" }}>●</span> operational
+      </div>
+      <div style={{ display: "flex", gap: 16 }}>
+        {["github", "discord", "twitter", "api"].map(x => (
+          <span key={x} style={{ fontFamily: MONO, fontSize: 10, color: C.darkGray, cursor: "pointer" }}
+            onMouseEnter={e => e.target.style.color = C.green}
+            onMouseLeave={e => e.target.style.color = C.darkGray}>/{x}</span>
+        ))}
+      </div>
+    </footer>
+  );
+}
+
+// ─── Shared styles ───
+const btnStyle = { fontFamily: MONO, fontSize: 12, fontWeight: 600, padding: "10px 24px", borderRadius: 0, cursor: "pointer", transition: "all 0.2s" };
+const filterBtnStyle = { fontFamily: MONO, fontSize: 10, padding: "4px 10px", cursor: "pointer", background: "transparent", border: `1px solid ${C.border}`, color: C.darkGray, transition: "all 0.2s" };
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════════════════════════
+export default function AgentGuard() {
+  const [page, setPage] = useState({ view: "home" });
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const doSearch = () => {
+    setPage({ view: "directory" });
+  };
+
+  // Scroll to top on page change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [page.view, page.id]);
+
+  const currentSkill = page.id ? SKILLS.find(s => s.id === page.id) : null;
+
+  return (
+    <div style={{ background: C.bg, color: C.white, minHeight: "100vh", fontFamily: MONO }}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        ${FONTS}
+        *{box-sizing:border-box;margin:0}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+        ::selection{background:${C.green}30}
+        input::placeholder{color:${C.dimGray}}
+        select{appearance:none}
+        option{background:${C.bg};color:${C.white}}
+        ::-webkit-scrollbar{width:6px}
+        ::-webkit-scrollbar-track{background:${C.bg}}
+        ::-webkit-scrollbar-thumb{background:${C.dimGray}}
+      `}} />
+      <Scanline />
+      <Nav page={page} setPage={setPage} searchQuery={searchQuery} setSearchQuery={setSearchQuery} onSearch={doSearch} />
+
+      {page.view === "home" && <HeroSection setPage={setPage} setSearchQuery={setSearchQuery} />}
+      {page.view === "directory" && <DirectoryPage setPage={setPage} skills={SKILLS} searchQuery={searchQuery} />}
+      {page.view === "detail" && <SkillDetailPage skill={currentSkill} setPage={setPage} />}
+      {page.view === "platforms" && <PlatformsPage />}
+
+      <Footer setPage={setPage} />
+    </div>
+  );
+}
